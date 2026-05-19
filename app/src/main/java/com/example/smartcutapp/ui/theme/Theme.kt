@@ -1,60 +1,41 @@
 package com.example.smartcutapp.ui.theme
 
-import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 import com.example.smartcutapp.app.ui.theme.SmartCutColors
+
+private val LightColorScheme = lightColorScheme(
+    primary = SmartCutColors.Primary,
+    onPrimary = SmartCutColors.OnPrimary,
+    secondary = SmartCutColors.Secondary,
+    background = SmartCutColors.BackgroundLight,
+    surface = SmartCutColors.CardBackgroundLight,
+    surfaceVariant = SmartCutColors.SurfaceLight,
+    onBackground = SmartCutColors.TextPrimary,
+    onSurface = SmartCutColors.TextPrimary,
+    outline = SmartCutColors.Divider,
+)
 
 private val DarkColorScheme = darkColorScheme(
     primary = SmartCutColors.Primary,
-    secondary = SmartCutColors.Secondary,
-    background = SmartCutColors.Background,
-    surface = SmartCutColors.CardBackground,
     onPrimary = SmartCutColors.OnPrimary,
-    onBackground = SmartCutColors.TextPrimary,
-    onSurface = SmartCutColors.TextPrimary
-)
-
-private val LightColorScheme = lightColorScheme(
-
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    secondary = SmartCutColors.Secondary,
+    background = SmartCutColors.BackgroundDark,
+    surface = SmartCutColors.CardBackgroundDark,
+    surfaceVariant = SmartCutColors.SurfaceDark,
+    onBackground = SmartCutColors.TextPrimaryDark,
+    onSurface = SmartCutColors.TextPrimaryDark,
+    outline = SmartCutColors.DividerDark,
 )
 
 @Composable
-fun SmartCutAppTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
-    content: @Composable () -> Unit
-) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
+fun SmartCutAppTheme(content: @Composable () -> Unit) {
+    val darkTheme = isSystemInDarkTheme()
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
         typography = Typography,
         content = content
     )
