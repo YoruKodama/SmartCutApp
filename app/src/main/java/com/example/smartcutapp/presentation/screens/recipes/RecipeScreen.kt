@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.smartcutapp.R
 import com.example.smartcutapp.app.ui.theme.SmartCutColors
+import com.example.smartcutapp.presentation.navigation.Screen
 import com.example.smartcutapp.presentation.screens.main.RecipeUi
 
 private val tempRecipes = listOf(
@@ -95,7 +96,8 @@ fun RecipesScreen(navController: NavController) {
                 items(filtered) { recipe ->
                     RecipeCard(
                         recipe = recipe,
-                        onClick = { navController.navigate("recipe_detail/${recipe.id}") }
+                        onClick = { navController.navigate(Screen.RecipeDetail.createRoute(recipe.id)) }
+
                     )
                 }
             }
