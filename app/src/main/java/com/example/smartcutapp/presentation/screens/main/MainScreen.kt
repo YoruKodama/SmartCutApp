@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.smartcutapp.R
 import com.example.smartcutapp.app.ui.theme.SmartCutColors
+import com.example.smartcutapp.presentation.navigation.Screen
 
 data class RecipeUi(
     val id: Int,
@@ -91,7 +92,10 @@ fun MainScreen(navController: NavController) {
                             mode = mode,
                             index = index + 1,
                             modifier = Modifier.weight(1f),
-                            onClick = { navController.navigate("blade_settings") }
+                            onClick = {
+                                if (index == 0) navController.navigate(Screen.BladeSettings.route)
+                                else navController.navigate(Screen.Slices.route)
+                            }
                         )
                     }
                 }
@@ -108,7 +112,7 @@ fun MainScreen(navController: NavController) {
                 RecentRecipeCard(
                     recipe = recipe,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    onClick = { navController.navigate("recipe_detail/${recipe.id}") }
+                    onClick = { navController.navigate(Screen.RecipeDetail.createRoute(recipe.id)) }
                 )
             }
         }

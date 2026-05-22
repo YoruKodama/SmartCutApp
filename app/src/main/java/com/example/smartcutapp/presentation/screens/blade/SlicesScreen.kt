@@ -21,10 +21,9 @@ import com.example.smartcutapp.R
 import com.example.smartcutapp.app.ui.theme.SmartCutColors
 
 @Composable
-fun BladeCubeScreen(navController: NavController) {
+fun SlicesScreen(navController: NavController) {
     val darkTheme = isSystemInDarkTheme()
-    var width by remember { mutableStateOf(15f) }
-    var height by remember { mutableStateOf(15f) }
+    var thickness by remember { mutableStateOf(5f) }
     var speed by remember { mutableStateOf(0.3f) }
 
     Scaffold(
@@ -57,7 +56,7 @@ fun BladeCubeScreen(navController: NavController) {
                     )
                 }
                 Text(
-                    text = "Нарезка кубиками",
+                    text = "Нарезка слайсами",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = if (darkTheme) MaterialTheme.colorScheme.onSurface
@@ -88,28 +87,19 @@ fun BladeCubeScreen(navController: NavController) {
                 }
 
                 Text(
-                    text = "Размер куба",
+                    text = "Толщина слайса",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SizeInput(
-                        label = "Ширина",
-                        value = width.toInt(),
-                        onMinus = { if (width > 1) width-- },
-                        onPlus = { if (width < 50) width++ },
-                        modifier = Modifier.weight(1f)
-                    )
-                    SizeInput(
-                        label = "Высота",
-                        value = height.toInt(),
-                        onMinus = { if (height > 1) height-- },
-                        onPlus = { if (height < 50) height++ },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                SizeInput(
+                    label = "Толщина",
+                    value = thickness.toInt(),
+                    onMinus = { if (thickness > 1) thickness-- },
+                    onPlus = { if (thickness < 50) thickness++ },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 Text(
                     text = "Скорость нарезки",
