@@ -21,8 +21,9 @@ import com.example.smartcutapp.R
 import com.example.smartcutapp.app.ui.theme.SmartCutColors
 
 @Composable
-fun BladeSettingsScreen(navController: NavController) {
+fun BladeSettingsScreen(navController: NavController, mode: String = "cubes") {
     val darkTheme = isSystemInDarkTheme()
+    val title = if (mode == "cubes") "Нарезка кубиками" else "Нарезка слайсами"
     var width by remember { mutableStateOf(15f) }
     var height by remember { mutableStateOf(15f) }
     var speed by remember { mutableStateOf(0.3f) }
@@ -57,7 +58,7 @@ fun BladeSettingsScreen(navController: NavController) {
                     )
                 }
                 Text(
-                    text = "Нарезка кубиками",
+                    text = title,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = if (darkTheme) MaterialTheme.colorScheme.onSurface
@@ -88,26 +89,36 @@ fun BladeSettingsScreen(navController: NavController) {
                 }
 
                 Text(
-                    text = "Размер куба",
+                    text = if (mode == "cubes") "Размер куба" else "Размер слайса",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (mode == "cubes") {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        SizeInput(
+                            label = "Ширина",
+                            value = width.toInt(),
+                            onMinus = { if (width > 1) width-- },
+                            onPlus = { if (width < 50) width++ },
+                            modifier = Modifier.weight(1f)
+                        )
+                        SizeInput(
+                            label = "Высота",
+                            value = height.toInt(),
+                            onMinus = { if (height > 1) height-- },
+                            onPlus = { if (height < 50) height++ },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                } else {
                     SizeInput(
-                        label = "Ширина",
+                        label = "Толщина",
                         value = width.toInt(),
                         onMinus = { if (width > 1) width-- },
                         onPlus = { if (width < 50) width++ },
-                        modifier = Modifier.weight(1f)
-                    )
-                    SizeInput(
-                        label = "Высота",
-                        value = height.toInt(),
-                        onMinus = { if (height > 1) height-- },
-                        onPlus = { if (height < 50) height++ },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
 
