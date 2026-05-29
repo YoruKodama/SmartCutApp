@@ -1,8 +1,7 @@
 package com.example.smartcutapp.domain.model
 
-data class User(
+data class Ingredient(
     val id: Int,
     val name: String,
-    val email: String,
-    val token: String?
+    val amount: String
 )
