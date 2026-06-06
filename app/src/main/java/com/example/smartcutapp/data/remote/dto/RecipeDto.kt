@@ -16,7 +16,8 @@ data class RecipeResponseDto(
 data class IngredientResponseDto(
     val id: Int,
     val name: String,
-    val amount: String? = null
+    val amount: String? = null,
+    val cuttable: Boolean = false
 )
 
 @Serializable
@@ -30,5 +31,9 @@ data class RecipeRequestDto(
 @Serializable
 data class IngredientRequestDto(
     val name: String,
-    val amount: String? = null
+    val amount: String? = null,
+    val cuttable: Boolean = false
 )
+
+@Serializable
+data class UploadResponseDto(val url: String)

@@ -9,35 +9,39 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import coil3.compose.AsyncImage
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.smartcutapp.R
 import com.example.smartcutapp.app.ui.theme.SmartCutColors
+import com.example.smartcutapp.domain.model.Recipe
 import com.example.smartcutapp.presentation.navigation.Screen
-import com.example.smartcutapp.presentation.screens.main.RecipeUi
 
-private val tempRecipes = listOf(
-    RecipeUi(1, "Салат Цезарь", "4 ингр"),
-    RecipeUi(2, "Греческий салат", "6 ингр"),
-    RecipeUi(3, "Оливье", "8 ингр"),
-    RecipeUi(4, "Капрезе", "3 ингр"),
-    RecipeUi(5, "Нисуаз", "7 ингр"),
-    RecipeUi(6, "Табуле", "5 ингр"),
-)
 
 @Composable
 fun RecipesScreen(navController: NavController) {
+    val viewModel: RecipesViewModel = viewModel()
     var searchQuery by remember { mutableStateOf("") }
-    val filtered = tempRecipes.filter {
+
+    val recipes by viewModel.recipes.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadRecipes()
+    }
+
+    val filtered = recipes.filter {
         it.name.contains(searchQuery, ignoreCase = true)
     }
 
@@ -46,7 +50,7 @@ fun RecipesScreen(navController: NavController) {
         contentWindowInsets = WindowInsets(0),
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { },
+                onClick = { navController.navigate(Screen.CreateRecipe.route) },
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(
@@ -63,6 +67,7 @@ fun RecipesScreen(navController: NavController) {
                 .padding(padding)
         ) {
             RecipesHeader()
+
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -84,21 +89,31 @@ fun RecipesScreen(navController: NavController) {
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 )
             )
-            LazyColumn(
-                contentPadding = PaddingValues(
-                    start = 16.dp,
-                    end = 16.dp,
-                    top = 8.dp,
-                    bottom = 16.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(filtered) { recipe ->
-                    RecipeCard(
-                        recipe = recipe,
-                        onClick = { navController.navigate(Screen.RecipeDetail.createRoute(recipe.id)) }
 
-                    )
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
+            } else if (error != null) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(text = error ?: "", color = MaterialTheme.colorScheme.error)
+                }
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 8.dp,
+                        bottom = 16.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(filtered) { recipe ->
+                        RecipeCard(
+                            recipe = recipe,
+                            onClick = { navController.navigate(Screen.RecipeDetail.createRoute(recipe.id)) }
+                        )
+                    }
                 }
             }
         }
@@ -127,17 +142,12 @@ private fun RecipesHeader() {
             else MaterialTheme.colorScheme.onPrimary,
             fontWeight = FontWeight.Bold
         )
-        Icon(
-            imageVector = Icons.Filled.Menu,
-            contentDescription = null,
-            tint = if (darkTheme) MaterialTheme.colorScheme.onSurface
-            else MaterialTheme.colorScheme.onPrimary
-        )
+        Spacer(Modifier.width(48.dp))
     }
 }
 
 @Composable
-private fun RecipeCard(recipe: RecipeUi, onClick: () -> Unit) {
+private fun RecipeCard(recipe: Recipe, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -160,12 +170,21 @@ private fun RecipeCard(recipe: RecipeUi, onClick: () -> Unit) {
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.salad_svgrepo_com__1_),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(36.dp)
-                )
+                if (!recipe.imageUrl.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = recipe.imageUrl,
+                        contentDescription = recipe.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(id = R.drawable.salad_svgrepo_com__1_),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -175,7 +194,7 @@ private fun RecipeCard(recipe: RecipeUi, onClick: () -> Unit) {
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = recipe.time,
+                    text = recipe.cookingTime ?: "",
                     style = MaterialTheme.typography.bodyMedium,
                     color = SmartCutColors.TextSecondary
                 )

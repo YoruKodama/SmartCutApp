@@ -7,15 +7,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class BladeSettingsViewModel : ViewModel() {
+class SliceSettingsViewModel : ViewModel() {
 
     val isConnected = MqttManager.isConnected
 
-    private val _width = MutableStateFlow(15)
-    val width: StateFlow<Int> = _width
-
-    private val _height = MutableStateFlow(15)
-    val height: StateFlow<Int> = _height
+    private val _thickness = MutableStateFlow(5)
+    val thickness: StateFlow<Int> = _thickness
 
     private val _speed = MutableStateFlow(0.3f)
     val speed: StateFlow<Float> = _speed
@@ -26,14 +23,13 @@ class BladeSettingsViewModel : ViewModel() {
     private val _sendResult = MutableStateFlow<String?>(null)
     val sendResult: StateFlow<String?> = _sendResult
 
-    fun setWidth(v: Int) { _width.value = v }
-    fun setHeight(v: Int) { _height.value = v }
+    fun setThickness(v: Int) { _thickness.value = v }
     fun setSpeed(v: Float) { _speed.value = v }
 
     fun sendCommand() {
         viewModelScope.launch {
             _isSending.value = true
-            val payload = """{"mode":"cube","width":${_width.value},"height":${_height.value},"speed":${"%.2f".format(_speed.value)}}"""
+            val payload = """{"mode":"slice","thickness":${_thickness.value},"speed":${"%.2f".format(_speed.value)}}"""
             val result = MqttManager.publish(MqttManager.TOPIC_COMMAND, payload)
             _sendResult.value = if (result.isSuccess) "Команда отправлена"
             else "Ошибка: ${result.exceptionOrNull()?.message}"

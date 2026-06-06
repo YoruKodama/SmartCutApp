@@ -7,36 +7,26 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
 import com.example.smartcutapp.R
 import com.example.smartcutapp.app.ui.theme.SmartCutColors
+import com.example.smartcutapp.domain.model.Recipe
 import com.example.smartcutapp.presentation.navigation.Screen
-
-data class RecipeUi(
-    val id: Int,
-    val name: String,
-    val time: String,
-)
 
 data class CutModeUi(
     val label: String,
     val description: String
-)
-
-private val tempRecipeOfDay = RecipeUi(
-    id = 1,
-    name = "Салат Цезарь",
-    time = "30 мин",
 )
 
 private val tempCutModes = listOf(
@@ -44,15 +34,19 @@ private val tempCutModes = listOf(
     CutModeUi("Слайсами", "Толщина слайса"),
 )
 
-private val tempRecentRecipes = listOf(
-    RecipeUi(1, "Цезарь", "4 ингр"),
-    RecipeUi(2, "Греческий", "6 ингр"),
-    RecipeUi(3, "Оливье", "8 ингр"),
-    RecipeUi(4, "Капрезе", "3 ингр"),
-)
-
 @Composable
 fun MainScreen(navController: NavController) {
+    val viewModel: MainViewModel = viewModel()
+    val recipes by viewModel.recipes.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadRecipes()
+    }
+
+    val recipeOfDay = recipes.firstOrNull()
+    val recentRecipes = recipes.drop(1).take(4)
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0)
@@ -70,10 +64,23 @@ fun MainScreen(navController: NavController) {
                     title = "Рецепт дня",
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                 )
-                RecipeOfDayCard(
-                    recipe = tempRecipeOfDay,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                } else if (recipeOfDay != null) {
+                    RecipeOfDayCard(
+                        recipe = recipeOfDay,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        onClick = { navController.navigate(Screen.RecipeDetail.createRoute(recipeOfDay.id)) }
+                    )
+                }
             }
 
             item {
@@ -93,27 +100,29 @@ fun MainScreen(navController: NavController) {
                             index = index + 1,
                             modifier = Modifier.weight(1f),
                             onClick = {
-                                if (index == 0) navController.navigate(Screen.BladeSettings.route)
-                                else navController.navigate(Screen.Slices.route)
+                                if (index == 0) navController.navigate(Screen.BladeSettings.createRoute())
+                                else navController.navigate(Screen.Slices.createRoute())
                             }
                         )
                     }
                 }
             }
 
-            item {
-                SectionTitle(
-                    title = "Недавние рецепты",
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                )
-            }
+            if (recentRecipes.isNotEmpty()) {
+                item {
+                    SectionTitle(
+                        title = "Недавние рецепты",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                    )
+                }
 
-            items(tempRecentRecipes) { recipe ->
-                RecentRecipeCard(
-                    recipe = recipe,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    onClick = { navController.navigate(Screen.RecipeDetail.createRoute(recipe.id)) }
-                )
+                items(recentRecipes) { recipe ->
+                    RecentRecipeCard(
+                        recipe = recipe,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        onClick = { navController.navigate(Screen.RecipeDetail.createRoute(recipe.id)) }
+                    )
+                }
             }
         }
     }
@@ -141,12 +150,7 @@ private fun MainHeader() {
             else MaterialTheme.colorScheme.onPrimary,
             fontWeight = FontWeight.Bold
         )
-        Icon(
-            imageVector = Icons.Filled.Menu,
-            contentDescription = "Меню",
-            tint = if (darkTheme) MaterialTheme.colorScheme.onSurface
-            else MaterialTheme.colorScheme.onPrimary
-        )
+        Spacer(Modifier.width(48.dp))
     }
 }
 
@@ -162,10 +166,12 @@ private fun SectionTitle(title: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun RecipeOfDayCard(recipe: RecipeUi, modifier: Modifier = Modifier) {
+private fun RecipeOfDayCard(recipe: Recipe, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val darkTheme = isSystemInDarkTheme()
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (darkTheme) MaterialTheme.colorScheme.surface
@@ -197,7 +203,7 @@ private fun RecipeOfDayCard(recipe: RecipeUi, modifier: Modifier = Modifier) {
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = recipe.time,
+                    text = recipe.cookingTime ?: "",
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (darkTheme) SmartCutColors.TextSecondary
                     else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
@@ -210,12 +216,21 @@ private fun RecipeOfDayCard(recipe: RecipeUi, modifier: Modifier = Modifier) {
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.salad_svgrepo_com__1_),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(56.dp)
-                )
+                if (!recipe.imageUrl.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = recipe.imageUrl,
+                        contentDescription = recipe.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(id = R.drawable.salad_svgrepo_com__1_),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(56.dp)
+                    )
+                }
             }
         }
     }
@@ -270,7 +285,7 @@ private fun CutModeCard(
 
 @Composable
 private fun RecentRecipeCard(
-    recipe: RecipeUi,
+    recipe: Recipe,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
@@ -296,12 +311,21 @@ private fun RecentRecipeCard(
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.salad_svgrepo_com__1_),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(32.dp)
-                )
+                if (!recipe.imageUrl.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = recipe.imageUrl,
+                        contentDescription = recipe.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(id = R.drawable.salad_svgrepo_com__1_),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -311,7 +335,7 @@ private fun RecentRecipeCard(
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = recipe.time,
+                    text = recipe.cookingTime ?: "",
                     style = MaterialTheme.typography.bodyMedium,
                     color = SmartCutColors.TextSecondary
                 )

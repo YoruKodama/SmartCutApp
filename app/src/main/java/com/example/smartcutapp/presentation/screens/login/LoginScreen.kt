@@ -1,4 +1,4 @@
-package com.example.smartcutapp.presentation.screens.register
+package com.example.smartcutapp.presentation.screens.login
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -24,26 +23,22 @@ import com.example.smartcutapp.app.ui.theme.SmartCutColors
 import com.example.smartcutapp.presentation.navigation.Screen
 
 @Composable
-fun RegisterScreen(navController: NavController) {
+fun LoginScreen(navController: NavController) {
     val darkTheme = isSystemInDarkTheme()
-    val viewModel: RegisterViewModel = viewModel()
+    val viewModel: LoginViewModel = viewModel()
 
-    var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var passwordConfirm by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var agreed by remember { mutableStateOf(false) }
 
-    val user by viewModel.user.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val loggedIn by viewModel.loggedIn.collectAsState()
 
-    // когда пользователь зарегистрировался — переходим на главный экран
-    LaunchedEffect(user) {
-        if (user != null) {
+    LaunchedEffect(loggedIn) {
+        if (loggedIn) {
             navController.navigate(Screen.Main.route) {
-                popUpTo(Screen.Register.route) { inclusive = true }
+                popUpTo(Screen.Login.route) { inclusive = true }
             }
         }
     }
@@ -65,19 +60,11 @@ fun RegisterScreen(navController: NavController) {
                         else MaterialTheme.colorScheme.primary
                     )
                     .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(horizontal = 8.dp, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(
-                        imageVector = Icons.Filled.ArrowBack,
-                        contentDescription = "Назад",
-                        tint = if (darkTheme) MaterialTheme.colorScheme.onSurface
-                        else MaterialTheme.colorScheme.onPrimary
-                    )
-                }
                 Text(
-                    text = "Регистрация",
+                    text = "Вход",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = if (darkTheme) MaterialTheme.colorScheme.onSurface
@@ -91,18 +78,7 @@ fun RegisterScreen(navController: NavController) {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Имя") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                    )
-                )
+                Spacer(Modifier.height(16.dp))
 
                 OutlinedTextField(
                     value = email,
@@ -144,40 +120,6 @@ fun RegisterScreen(navController: NavController) {
                     )
                 )
 
-                OutlinedTextField(
-                    value = passwordConfirm,
-                    onValueChange = { passwordConfirm = it },
-                    label = { Text("Подтвердите пароль") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true,
-                    visualTransformation = if (passwordVisible) VisualTransformation.None
-                    else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                    )
-                )
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Checkbox(
-                        checked = agreed,
-                        onCheckedChange = { agreed = it },
-                        colors = CheckboxDefaults.colors(
-                            checkedColor = MaterialTheme.colorScheme.primary
-                        )
-                    )
-                    Text(
-                        text = "Согласен с условиями использования",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = SmartCutColors.TextSecondary
-                    )
-                }
-
                 if (error != null) {
                     Text(
                         text = error ?: "",
@@ -189,14 +131,10 @@ fun RegisterScreen(navController: NavController) {
                 Spacer(Modifier.weight(1f))
 
                 Button(
-                    onClick = {
-                        if (password == passwordConfirm) {
-                            viewModel.register(name, email, password)
-                        }
-                    },
+                    onClick = { viewModel.login(email, password) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    enabled = agreed && name.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty() && !isLoading,
+                    enabled = email.isNotEmpty() && password.isNotEmpty() && !isLoading,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -209,11 +147,21 @@ fun RegisterScreen(navController: NavController) {
                         )
                     } else {
                         Text(
-                            text = "Зарегистрироваться",
+                            text = "Войти",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                     }
+                }
+
+                TextButton(
+                    onClick = { navController.navigate(Screen.Register.route) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Нет аккаунта? Зарегистрироваться",
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }

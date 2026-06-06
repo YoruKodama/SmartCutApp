@@ -8,8 +8,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.smartcutapp.app.ui.theme.SmartCutColors
 import com.example.smartcutapp.presentation.navigation.Screen
@@ -17,8 +19,23 @@ import com.example.smartcutapp.presentation.navigation.Screen
 @Composable
 fun SettingsScreen(navController: NavController) {
     val darkTheme = isSystemInDarkTheme()
-    var autoConnect by remember { mutableStateOf(false) }
-    var deviceName by remember { mutableStateOf("SmartCut") }
+    val viewModel: SettingsViewModel = viewModel()
+
+    val isConnected by viewModel.isConnected.collectAsState()
+    val isConnecting by viewModel.isConnecting.collectAsState()
+    val brokerUrl by viewModel.brokerUrl.collectAsState()
+    val deviceStatus by viewModel.deviceStatus.collectAsState()
+    val esp32Online by viewModel.esp32Online.collectAsState()
+    val error by viewModel.error.collectAsState()
+    val isLoggedIn by viewModel.isLoggedIn.collectAsState()
+
+    LaunchedEffect(isLoggedIn) {
+        if (!isLoggedIn) {
+            navController.navigate(Screen.Login.route) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -57,7 +74,7 @@ fun SettingsScreen(navController: NavController) {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "УСТРОЙСТВО",
+                    text = "ESP32 / MQTT",
                     style = MaterialTheme.typography.labelSmall,
                     color = SmartCutColors.TextSecondary,
                     fontWeight = FontWeight.SemiBold
@@ -67,39 +84,28 @@ fun SettingsScreen(navController: NavController) {
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
-                    Column {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "ESP32 подключение",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Switch(
-                                checked = autoConnect,
-                                onCheckedChange = { autoConnect = it },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
-                                )
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        StatusRow(
+                            label = "Брокер MQTT",
+                            connected = isConnected,
+                            onText = "Подключено",
+                            offText = "Отключено"
+                        )
+
+                        if (isConnected) {
+                            StatusRow(
+                                label = "ESP32",
+                                connected = esp32Online,
+                                onText = "Онлайн",
+                                offText = "Не найден"
                             )
                         }
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-
                         OutlinedTextField(
-                            value = deviceName,
-                            onValueChange = { deviceName = it },
-                            label = { Text("Имя устройства") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
+                            value = brokerUrl,
+                            onValueChange = { viewModel.setBrokerUrl(it) },
+                            label = { Text("Адрес брокера MQTT") },
+                            modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
@@ -107,8 +113,48 @@ fun SettingsScreen(navController: NavController) {
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outline
                             )
                         )
+
+                        if (deviceStatus.isNotEmpty()) {
+                            Text(
+                                text = "Последнее сообщение: $deviceStatus",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SmartCutColors.TextSecondary
+                            )
+                        }
+
+                        if (error != null) {
+                            Text(
+                                text = error ?: "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+
+                        Button(
+                            onClick = { viewModel.toggleConnection() },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp),
+                            enabled = !isConnecting,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isConnected) MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            if (isConnecting) {
+                                CircularProgressIndicator(
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            } else {
+                                Text(
+                                    text = if (isConnected) "Отключиться" else "Подключиться",
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
+                        }
                     }
                 }
+
                 Text(
                     text = "ПРИЛОЖЕНИЕ",
                     style = MaterialTheme.typography.labelSmall,
@@ -164,21 +210,77 @@ fun SettingsScreen(navController: NavController) {
                 }
 
                 Spacer(Modifier.weight(1f))
-                Button(
-                    onClick = { navController.navigate(Screen.Register.route) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text(
-                        text = "Регистрация",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
+
+                if (isLoggedIn) {
+                    Button(
+                        onClick = { viewModel.logout() },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text(
+                            text = "Выйти из аккаунта",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onError
+                        )
+                    }
+                } else {
+                    Button(
+                        onClick = { navController.navigate(Screen.Register.route) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Text(
+                            text = "Зарегистрироваться",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun StatusRow(
+    label: String,
+    connected: Boolean,
+    onText: String,
+    offText: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .background(
+                        color = if (connected) Color(0xFF4CAF50) else Color(0xFFE53935),
+                        shape = RoundedCornerShape(5.dp)
+                    )
+            )
+            Text(
+                text = if (connected) onText else offText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (connected) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
+            )
         }
     }
 }

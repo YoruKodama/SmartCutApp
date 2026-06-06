@@ -16,5 +16,6 @@ fun RecipeResponseDto.toRecipe() = Recipe(
 fun IngredientResponseDto.toIngredient() = Ingredient(
     id = id,
     name = name,
-    amount = amount ?: ""
+    amount = amount ?: "",
+    cuttable = cuttable
 )

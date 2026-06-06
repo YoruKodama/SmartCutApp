@@ -2,6 +2,7 @@ package com.example.smartcutapp.presentation.screens.main
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.smartcutapp.data.remote.api.TokenStorage
 import com.example.smartcutapp.data.repository.RecipeRepositoryImpl
 import com.example.smartcutapp.domain.model.Recipe
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,17 +17,14 @@ class MainViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
-
-    fun loadRecipes(token: String) {
+    fun loadRecipes() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val result = RecipeRepositoryImpl(token).getRecipes()
+                val result = RecipeRepositoryImpl(TokenStorage.token).getRecipes()
                 _recipes.value = result
             } catch (e: Exception) {
-                _error.value = e.message
+                _recipes.value = emptyList()
             } finally {
                 _isLoading.value = false
             }

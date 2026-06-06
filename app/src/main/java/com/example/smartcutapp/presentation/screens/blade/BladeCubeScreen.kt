@@ -13,19 +13,33 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.smartcutapp.R
 import com.example.smartcutapp.app.ui.theme.SmartCutColors
 
 @Composable
-fun BladeCubeScreen(navController: NavController) {
+fun BladeCubeScreen(navController: NavController, ingredient: String = "") {
     val darkTheme = isSystemInDarkTheme()
-    var width by remember { mutableStateOf(15f) }
-    var height by remember { mutableStateOf(15f) }
-    var speed by remember { mutableStateOf(0.3f) }
+    val viewModel: BladeSettingsViewModel = viewModel()
+
+    val width by viewModel.width.collectAsState()
+    val height by viewModel.height.collectAsState()
+    val speed by viewModel.speed.collectAsState()
+    val isSending by viewModel.isSending.collectAsState()
+    val sendResult by viewModel.sendResult.collectAsState()
+    val isConnected by viewModel.isConnected.collectAsState()
+
+    LaunchedEffect(sendResult) {
+        if (sendResult != null) {
+            kotlinx.coroutines.delay(2000)
+            viewModel.clearResult()
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -57,11 +71,21 @@ fun BladeCubeScreen(navController: NavController) {
                     )
                 }
                 Text(
-                    text = "Нарезка кубиками",
+                    text = if (ingredient.isNotEmpty()) "Кубиками: $ingredient" else "Нарезка кубиками",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = if (darkTheme) MaterialTheme.colorScheme.onSurface
                     else MaterialTheme.colorScheme.onPrimary
+                )
+                Spacer(Modifier.weight(1f))
+                Box(
+                    modifier = Modifier
+                        .padding(end = 12.dp)
+                        .size(10.dp)
+                        .background(
+                            color = if (isConnected) Color(0xFF4CAF50) else Color(0xFFE53935),
+                            shape = RoundedCornerShape(5.dp)
+                        )
                 )
             }
 
@@ -97,16 +121,16 @@ fun BladeCubeScreen(navController: NavController) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     SizeInput(
                         label = "Ширина",
-                        value = width.toInt(),
-                        onMinus = { if (width > 1) width-- },
-                        onPlus = { if (width < 50) width++ },
+                        value = width,
+                        onMinus = { if (width > 1) viewModel.setWidth(width - 1) },
+                        onPlus = { if (width < 50) viewModel.setWidth(width + 1) },
                         modifier = Modifier.weight(1f)
                     )
                     SizeInput(
                         label = "Высота",
-                        value = height.toInt(),
-                        onMinus = { if (height > 1) height-- },
-                        onPlus = { if (height < 50) height++ },
+                        value = height,
+                        onMinus = { if (height > 1) viewModel.setHeight(height - 1) },
+                        onPlus = { if (height < 50) viewModel.setHeight(height + 1) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -122,21 +146,13 @@ fun BladeCubeScreen(navController: NavController) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = "Медленно",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = SmartCutColors.TextSecondary
-                    )
-                    Text(
-                        text = "Быстро",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = SmartCutColors.TextSecondary
-                    )
+                    Text(text = "Медленно", style = MaterialTheme.typography.bodyMedium, color = SmartCutColors.TextSecondary)
+                    Text(text = "Быстро", style = MaterialTheme.typography.bodyMedium, color = SmartCutColors.TextSecondary)
                 }
 
                 Slider(
                     value = speed,
-                    onValueChange = { speed = it },
+                    onValueChange = { viewModel.setSpeed(it) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = SliderDefaults.colors(
                         thumbColor = MaterialTheme.colorScheme.primary,
@@ -145,21 +161,48 @@ fun BladeCubeScreen(navController: NavController) {
                     )
                 )
 
+                if (sendResult != null) {
+                    Text(
+                        text = sendResult ?: "",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (sendResult?.startsWith("Ошибка") == true)
+                            MaterialTheme.colorScheme.error
+                        else Color(0xFF4CAF50)
+                    )
+                }
+
+                if (!isConnected) {
+                    Text(
+                        text = "ESP32 не подключён. Настройте MQTT в разделе Настройки.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+
                 Spacer(Modifier.height(8.dp))
 
                 Button(
-                    onClick = { navController.popBackStack() },
+                    onClick = { viewModel.sendCommand() },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
+                    enabled = isConnected && !isSending,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 ) {
-                    Text(
-                        text = "Применить",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
+                    if (isSending) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    } else {
+                        Text(
+                            text = "Применить",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
                 }
             }
         }
@@ -183,22 +226,14 @@ private fun SizeInput(
             modifier = Modifier.padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = SmartCutColors.TextSecondary
-            )
+            Text(text = label, style = MaterialTheme.typography.bodyMedium, color = SmartCutColors.TextSecondary)
             Spacer(Modifier.height(8.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 IconButton(onClick = onMinus) {
-                    Text(
-                        text = "−",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Text(text = "−", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
                 }
                 Text(
                     text = "$value мм",
@@ -207,11 +242,7 @@ private fun SizeInput(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 IconButton(onClick = onPlus) {
-                    Text(
-                        text = "+",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Text(text = "+", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
                 }
             }
         }

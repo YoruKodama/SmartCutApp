@@ -1,18 +1,16 @@
-package com.example.smartcutapp.presentation.screens.recipes
+package com.example.smartcutapp.presentation.screens.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.smartcutapp.data.remote.api.TokenStorage
-import com.example.smartcutapp.data.repository.RecipeRepositoryImpl
-import com.example.smartcutapp.domain.model.Recipe
+import com.example.smartcutapp.data.repository.AuthRepositoryImpl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class RecipesViewModel : ViewModel() {
+class LoginViewModel : ViewModel() {
 
-    private val _recipes = MutableStateFlow<List<Recipe>>(emptyList())
-    val recipes: StateFlow<List<Recipe>> = _recipes
+    private val repository = AuthRepositoryImpl()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
@@ -20,12 +18,17 @@ class RecipesViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
-    fun loadRecipes() {
+    private val _loggedIn = MutableStateFlow(false)
+    val loggedIn: StateFlow<Boolean> = _loggedIn
+
+    fun login(email: String, password: String) {
         viewModelScope.launch {
             _isLoading.value = true
+            _error.value = null
             try {
-                val result = RecipeRepositoryImpl(TokenStorage.token).getRecipes()
-                _recipes.value = result
+                val result = repository.login(email, password)
+                TokenStorage.token = result.token ?: ""
+                _loggedIn.value = true
             } catch (e: Exception) {
                 _error.value = e.message
             } finally {
