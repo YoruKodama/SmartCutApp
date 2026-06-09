@@ -10,12 +10,12 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 
 object MqttManager {
 
-    const val TOPIC_COMMAND = "smartcut/cmd"
+    const val TOPIC_COMMAND = "smartcut/cmd" // топик для отправки команд
     const val TOPIC_STATUS = "smartcut/status"
 
     private var client: MqttClient? = null
 
-    private val _isConnected = MutableStateFlow(false)
+    private val _isConnected = MutableStateFlow(false) // создали изменяемый поток только внутри
     val isConnected: StateFlow<Boolean> = _isConnected
 
     private val _deviceStatus = MutableStateFlow("")
@@ -34,7 +34,7 @@ object MqttManager {
             val mqttClient = MqttClient(
                 brokerUrl,
                 "SmartCutApp-${System.currentTimeMillis()}",
-                MemoryPersistence()
+                MemoryPersistence() //недоставленные сообщения храним в оперативной памяти
             )
             val opts = MqttConnectOptions().apply {
                 isCleanSession = true
@@ -63,9 +63,10 @@ object MqttManager {
 
     suspend fun publish(topic: String, payload: String): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
-            val c = client ?: error("Нет подключения к брокеру")
+            val c = client ?: error("Нет подключения к брокеру") //если клиент null сбрасываем подключение
             if (!c.isConnected) error("Нет подключения к брокеру")
-            val msg = MqttMessage(payload.toByteArray()).apply { qos = 1 }
+            val msg = MqttMessage(payload.toByteArray()).apply { //перевод в байты mqtt работает с байтами
+                qos = 1 }  //гарантия доставки сообщения
             c.publish(topic, msg)
         }
     }
