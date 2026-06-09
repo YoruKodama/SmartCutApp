@@ -8,7 +8,7 @@
 
 ## Демонстрация
 
-<video src="assets/demo.mp4" controls width="360"></video>
+[Смотреть видео работы приложения](https://drive.google.com/file/d/1-PUCZDMBB_OZTyWIyMkwA7An6udl2CbM/view?usp=sharing)
 
 ---
 
