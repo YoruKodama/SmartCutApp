@@ -13,7 +13,7 @@ object MqttManager {
     const val TOPIC_COMMAND = "smartcut/cmd" // топик для отправки команд
     const val TOPIC_STATUS = "smartcut/status"
 
-    private var client: MqttClient? = null
+    private var client: MqttClient? = null //клиент наша сторона соединения
 
     private val _isConnected = MutableStateFlow(false) // создали изменяемый поток только внутри
     val isConnected: StateFlow<Boolean> = _isConnected
