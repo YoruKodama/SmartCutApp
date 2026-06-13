@@ -45,7 +45,6 @@ android {
 
 dependencies {
     implementation("io.ktor:ktor-client-core:2.3.12")
-
     implementation("io.ktor:ktor-client-android:2.3.12")
     implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
     implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
@@ -65,6 +64,7 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.3.0")
     implementation("org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5")
     implementation(libs.androidx.compose.foundation.layout)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 
@@ -74,6 +74,4 @@ dependencies {
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
-
 }

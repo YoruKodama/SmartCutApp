@@ -10,8 +10,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.smartcutapp.data.remote.api.TokenStorage
+import com.example.smartcutapp.presentation.screens.ai_recipe.AiRecipeScreen
 import com.example.smartcutapp.presentation.screens.blade.BladeCubeScreen
 import com.example.smartcutapp.presentation.screens.blade.SlicesScreen
+import com.example.smartcutapp.presentation.screens.camera.CameraScreen
 import com.example.smartcutapp.presentation.screens.create_recipe.CreateRecipeScreen
 import com.example.smartcutapp.presentation.screens.login.LoginScreen
 import com.example.smartcutapp.presentation.screens.main.MainScreen
@@ -19,6 +21,7 @@ import com.example.smartcutapp.presentation.screens.recipe_detail.RecipeDetailSc
 import com.example.smartcutapp.presentation.screens.recipes.RecipesScreen
 import com.example.smartcutapp.presentation.screens.register.RegisterScreen
 import com.example.smartcutapp.presentation.screens.settings.SettingsScreen
+import com.example.smartcutapp.presentation.screens.weighing.WeighingScreen
 
 @Composable
 fun NavGraph(navController: NavHostController, padding: PaddingValues) {
@@ -35,6 +38,9 @@ fun NavGraph(navController: NavHostController, padding: PaddingValues) {
         composable(Screen.Settings.route) { SettingsScreen(navController) }
         composable(Screen.Register.route) { RegisterScreen(navController) }
         composable(Screen.CreateRecipe.route) { CreateRecipeScreen(navController) }
+        composable(Screen.AiRecipe.route) { AiRecipeScreen(navController) }
+        composable(Screen.Weighing.route) { WeighingScreen(navController) }
+        composable(Screen.Camera.route) { CameraScreen(navController) }
         composable(
             route = Screen.BladeSettings.route,
             arguments = listOf(navArgument("ingredient") {

@@ -7,6 +7,9 @@ sealed class Screen(val route: String) {
     object Settings : Screen("settings")
     object Register : Screen("register")
     object CreateRecipe : Screen("create_recipe")
+    object AiRecipe : Screen("ai_recipe")
+    object Weighing : Screen("weighing")
+    object Camera : Screen("camera")
     object BladeSettings : Screen("blade_settings?ingredient={ingredient}") {
         fun createRoute(ingredient: String = "") =
             if (ingredient.isEmpty()) "blade_settings"

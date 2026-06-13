@@ -2,7 +2,6 @@ package com.example.smartcutapp.presentation.screens.recipes
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,10 +26,12 @@ import com.example.smartcutapp.R
 import com.example.smartcutapp.app.ui.theme.SmartCutColors
 import com.example.smartcutapp.domain.model.Recipe
 import com.example.smartcutapp.presentation.navigation.Screen
+import com.example.smartcutapp.ui.theme.LocalDarkTheme
 
 
 @Composable
 fun RecipesScreen(navController: NavController) {
+    val darkTheme = LocalDarkTheme.current
     val viewModel: RecipesViewModel = viewModel()
     var searchQuery by remember { mutableStateOf("") }
 
@@ -49,15 +51,30 @@ fun RecipesScreen(navController: NavController) {
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0),
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { navController.navigate(Screen.CreateRecipe.route) },
-                containerColor = MaterialTheme.colorScheme.primary
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Add,
-                    contentDescription = "Добавить рецепт",
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
+                SmallFloatingActionButton(
+                    onClick = { navController.navigate(Screen.AiRecipe.route) },
+                    containerColor = MaterialTheme.colorScheme.secondary
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = "AI помощник",
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+                FloatingActionButton(
+                    onClick = { navController.navigate(Screen.CreateRecipe.route) },
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = "Добавить рецепт",
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
             }
         }
     ) { padding ->
@@ -122,7 +139,7 @@ fun RecipesScreen(navController: NavController) {
 
 @Composable
 private fun RecipesHeader() {
-    val darkTheme = isSystemInDarkTheme()
+    val darkTheme = LocalDarkTheme.current
     Row(
         modifier = Modifier
             .fillMaxWidth()

@@ -21,6 +21,7 @@ fun BottomBar(navController: NavController) {
     val items = listOf(
         BottomNavItem(Screen.Main.route, R.drawable.home_svgrepo_com_1, "Главная"),
         BottomNavItem(Screen.Recipes.route, R.drawable.notepad_svgrepo_com_1, "Рецепты"),
+        BottomNavItem(Screen.Weighing.route, R.drawable.scales, "Весы"),
         BottomNavItem(Screen.Settings.route, R.drawable.settings_svgrepo_com_1, "Настройки"),
     )
     val navBackStack by navController.currentBackStackEntryAsState()

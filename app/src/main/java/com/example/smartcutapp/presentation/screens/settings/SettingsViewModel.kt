@@ -3,6 +3,8 @@ package com.example.smartcutapp.presentation.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.smartcutapp.data.local.PreferencesManager
+import com.example.smartcutapp.data.local.ThemeManager
+import com.example.smartcutapp.data.local.ThemeMode
 import com.example.smartcutapp.data.mqtt.MqttManager
 import com.example.smartcutapp.data.remote.api.TokenStorage
 import kotlinx.coroutines.delay
@@ -28,9 +30,39 @@ class SettingsViewModel : ViewModel() {
     private val _isLoggedIn = MutableStateFlow(TokenStorage.token.isNotEmpty())
     val isLoggedIn: StateFlow<Boolean> = _isLoggedIn
 
+    val themeMode: StateFlow<ThemeMode> = ThemeManager.themeMode
+
+    private val _mistralApiKey = MutableStateFlow(PreferencesManager.mistralApiKey)
+    val mistralApiKey: StateFlow<String> = _mistralApiKey
+
+    private val _hfToken = MutableStateFlow(PreferencesManager.hfToken)
+    val hfToken: StateFlow<String> = _hfToken
+
+    private val _esp32CamUrl = MutableStateFlow(PreferencesManager.esp32CamUrl)
+    val esp32CamUrl: StateFlow<String> = _esp32CamUrl
+
     fun setBrokerUrl(url: String) {
         _brokerUrl.value = url
         MqttManager.brokerUrl = url
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        ThemeManager.setThemeMode(mode)
+    }
+
+    fun setMistralApiKey(key: String) {
+        _mistralApiKey.value = key
+        PreferencesManager.mistralApiKey = key
+    }
+
+    fun setHfToken(token: String) {
+        _hfToken.value = token
+        PreferencesManager.hfToken = token
+    }
+
+    fun setEsp32CamUrl(url: String) {
+        _esp32CamUrl.value = url
+        PreferencesManager.esp32CamUrl = url
     }
 
     fun toggleConnection() {

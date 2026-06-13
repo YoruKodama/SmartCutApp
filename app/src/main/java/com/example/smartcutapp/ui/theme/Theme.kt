@@ -5,7 +5,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import com.example.smartcutapp.app.ui.theme.SmartCutColors
+
+val LocalDarkTheme = compositionLocalOf { false }
 
 private val LightColorScheme = lightColorScheme(
     primary = SmartCutColors.Primary,
@@ -32,11 +36,15 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 @Composable
-fun SmartCutAppTheme(content: @Composable () -> Unit) {
-    val darkTheme = isSystemInDarkTheme()
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
-        typography = Typography,
-        content = content
-    )
+fun SmartCutAppTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit
+) {
+    CompositionLocalProvider(LocalDarkTheme provides darkTheme) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }
