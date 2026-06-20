@@ -108,6 +108,17 @@ fun MainScreen(navController: NavController) {
                 }
             }
 
+            item {
+                SectionTitle(
+                    title = "AI нарезка",
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                )
+                AiScanCard(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    onClick = { navController.navigate(Screen.ProductScan.route) }
+                )
+            }
+
             if (recentRecipes.isNotEmpty()) {
                 item {
                     SectionTitle(
@@ -278,6 +289,54 @@ private fun CutModeCard(
                 text = mode.description,
                 style = MaterialTheme.typography.bodyMedium,
                 color = SmartCutColors.TextSecondary
+            )
+        }
+    }
+}
+
+@Composable
+private fun AiScanCard(modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val darkTheme = isSystemInDarkTheme()
+    Card(
+        modifier = modifier.fillMaxWidth().clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (darkTheme) MaterialTheme.colorScheme.surface
+            else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+        ),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "🔍", style = MaterialTheme.typography.titleLarge)
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Распознать продукт",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Ollama + ESP32-CAM подберёт режим нарезки автоматически",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SmartCutColors.TextSecondary
+                )
+            }
+            Text(
+                text = "→",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }

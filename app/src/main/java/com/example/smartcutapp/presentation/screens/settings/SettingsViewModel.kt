@@ -35,11 +35,14 @@ class SettingsViewModel : ViewModel() {
     private val _mistralApiKey = MutableStateFlow(PreferencesManager.mistralApiKey)
     val mistralApiKey: StateFlow<String> = _mistralApiKey
 
-    private val _hfToken = MutableStateFlow(PreferencesManager.hfToken)
-    val hfToken: StateFlow<String> = _hfToken
-
     private val _esp32CamUrl = MutableStateFlow(PreferencesManager.esp32CamUrl)
     val esp32CamUrl: StateFlow<String> = _esp32CamUrl
+
+    private val _ollamaUrl = MutableStateFlow(PreferencesManager.ollamaUrl)
+    val ollamaUrl: StateFlow<String> = _ollamaUrl
+
+    private val _ollamaModel = MutableStateFlow(PreferencesManager.ollamaModel)
+    val ollamaModel: StateFlow<String> = _ollamaModel
 
     fun setBrokerUrl(url: String) {
         _brokerUrl.value = url
@@ -55,14 +58,19 @@ class SettingsViewModel : ViewModel() {
         PreferencesManager.mistralApiKey = key
     }
 
-    fun setHfToken(token: String) {
-        _hfToken.value = token
-        PreferencesManager.hfToken = token
-    }
-
     fun setEsp32CamUrl(url: String) {
         _esp32CamUrl.value = url
         PreferencesManager.esp32CamUrl = url
+    }
+
+    fun setOllamaUrl(url: String) {
+        _ollamaUrl.value = url
+        PreferencesManager.ollamaUrl = url
+    }
+
+    fun setOllamaModel(model: String) {
+        _ollamaModel.value = model
+        PreferencesManager.ollamaModel = model
     }
 
     fun toggleConnection() {

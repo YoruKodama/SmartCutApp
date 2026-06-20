@@ -37,11 +37,11 @@ fun SettingsScreen(navController: NavController) {
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
     val mistralApiKey by viewModel.mistralApiKey.collectAsState()
-    val hfToken by viewModel.hfToken.collectAsState()
     val esp32CamUrl by viewModel.esp32CamUrl.collectAsState()
+    val ollamaUrl by viewModel.ollamaUrl.collectAsState()
+    val ollamaModel by viewModel.ollamaModel.collectAsState()
 
     var showMistralKey by remember { mutableStateOf(false) }
-    var showHfToken by remember { mutableStateOf(false) }
 
     LaunchedEffect(isLoggedIn) {
         if (!isLoggedIn) {
@@ -186,34 +186,45 @@ fun SettingsScreen(navController: NavController) {
                         )
 
                         Text(
-                            text = "HuggingFace Token",
+                            text = "Ollama — адрес сервера",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "hf.co/settings/tokens — для распознавания продуктов с ESP32-CAM",
+                            text = "IP ПК в локальной сети с запущенным Ollama — для распознавания продуктов",
                             style = MaterialTheme.typography.bodySmall,
                             color = SmartCutColors.TextSecondary
                         )
                         OutlinedTextField(
-                            value = hfToken,
-                            onValueChange = { viewModel.setHfToken(it) },
-                            label = { Text("hf_...") },
+                            value = ollamaUrl,
+                            onValueChange = { viewModel.setOllamaUrl(it) },
+                            label = { Text("http://192.168.1.100:11434") },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true,
-                            visualTransformation = if (showHfToken) VisualTransformation.None
-                            else PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            trailingIcon = {
-                                TextButton(onClick = { showHfToken = !showHfToken }) {
-                                    Text(
-                                        text = if (showHfToken) "Скрыть" else "Показать",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                            )
+                        )
+
+                        Text(
+                            text = "Ollama — модель",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "llava (рекомендуется) или moondream для слабых ПК",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SmartCutColors.TextSecondary
+                        )
+                        OutlinedTextField(
+                            value = ollamaModel,
+                            onValueChange = { viewModel.setOllamaModel(it) },
+                            label = { Text("llava") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outline

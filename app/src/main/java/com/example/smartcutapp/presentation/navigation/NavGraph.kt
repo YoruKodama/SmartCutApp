@@ -14,6 +14,7 @@ import com.example.smartcutapp.presentation.screens.ai_recipe.AiRecipeScreen
 import com.example.smartcutapp.presentation.screens.blade.BladeCubeScreen
 import com.example.smartcutapp.presentation.screens.blade.SlicesScreen
 import com.example.smartcutapp.presentation.screens.camera.CameraScreen
+import com.example.smartcutapp.presentation.screens.product_scan.ProductScanScreen
 import com.example.smartcutapp.presentation.screens.create_recipe.CreateRecipeScreen
 import com.example.smartcutapp.presentation.screens.login.LoginScreen
 import com.example.smartcutapp.presentation.screens.main.MainScreen
@@ -41,6 +42,7 @@ fun NavGraph(navController: NavHostController, padding: PaddingValues) {
         composable(Screen.AiRecipe.route) { AiRecipeScreen(navController) }
         composable(Screen.Weighing.route) { WeighingScreen(navController) }
         composable(Screen.Camera.route) { CameraScreen(navController) }
+        composable(Screen.ProductScan.route) { ProductScanScreen(navController) }
         composable(
             route = Screen.BladeSettings.route,
             arguments = listOf(navArgument("ingredient") {

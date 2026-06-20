@@ -1,5 +1,6 @@
 package com.example.smartcutapp.presentation.screens.camera
 
+import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.smartcutapp.data.local.PreferencesManager
@@ -13,13 +14,21 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 @Serializable
-private data class HFCaptionResult(
-    @SerialName("generated_text") val generatedText: String
+private data class OllamaRequest(
+    val model: String,
+    val prompt: String,
+    val images: List<String>,
+    val stream: Boolean = false
+)
+
+@Serializable
+private data class OllamaResponse(
+    val response: String = "",
+    val done: Boolean = false
 )
 
 class CameraViewModel : ViewModel() {
@@ -47,10 +56,11 @@ class CameraViewModel : ViewModel() {
 
     fun captureAndAnalyze() {
         val camUrl = PreferencesManager.esp32CamUrl.trimEnd('/')
-        val hfToken = PreferencesManager.hfToken
+        val ollamaUrl = PreferencesManager.ollamaUrl.trimEnd('/')
+        val ollamaModel = PreferencesManager.ollamaModel.ifBlank { "llava" }
 
-        if (hfToken.isBlank()) {
-            _error.value = "Укажите HuggingFace токен в Настройках → AI Помощник"
+        if (ollamaUrl.isBlank()) {
+            _error.value = "Укажите адрес Ollama в Настройках → AI Помощник"
             return
         }
 
@@ -65,25 +75,25 @@ class CameraViewModel : ViewModel() {
                 _isCapturing.value = false
                 _isAnalyzing.value = true
 
-                val results: List<HFCaptionResult> = client.post(
-                    "https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-large"
-                ) {
-                    header("Authorization", "Bearer $hfToken")
-                    contentType(ContentType.Application.OctetStream)
-                    setBody(imageBytes)
+                val base64Image = Base64.encodeToString(imageBytes, Base64.NO_WRAP)
+                val response: OllamaResponse = client.post("$ollamaUrl/api/generate") {
+                    contentType(ContentType.Application.Json)
+                    setBody(OllamaRequest(
+                        model = ollamaModel,
+                        prompt = "Describe what you see in this image briefly in one sentence.",
+                        images = listOf(base64Image)
+                    ))
                 }.body()
 
-                val caption = results.firstOrNull()?.generatedText ?: "Не распознано"
-                _result.value = caption
+                _result.value = response.response.trim().ifEmpty { "Не удалось описать изображение" }
 
             } catch (e: Exception) {
                 _error.value = when {
                     e.message?.contains("Connection refused") == true ||
-                    e.message?.contains("ConnectException") == true ||
+                    e.message?.contains("ConnectException") == true ->
+                        "Нет подключения. Проверьте адреса ESP32-CAM и Ollama в настройках."
                     e.message?.contains("SocketTimeoutException") == true ->
-                        "ESP32-CAM недоступна. Проверьте IP-адрес в настройках и подключение к Wi-Fi."
-                    e.message?.contains("Loading") == true ->
-                        "Модель загружается на сервере HuggingFace (~20 сек), попробуйте ещё раз."
+                        "Время ожидания истекло. Ollama может долго загружать модель."
                     else -> "Ошибка: ${e.message}"
                 }
             } finally {
