@@ -1,32 +1,48 @@
 package com.example.smartcutapp.data.repository
 
+import com.example.smartcutapp.data.local.RecipeCache
 import com.example.smartcutapp.data.mapper.toRecipe
+import com.example.smartcutapp.data.mapper.toRequest
 import com.example.smartcutapp.data.remote.api.ApiClient
-import com.example.smartcutapp.data.remote.dto.IngredientRequestDto
-import com.example.smartcutapp.data.remote.dto.RecipeRequestDto
 import com.example.smartcutapp.data.remote.dto.RecipeResponseDto
 import com.example.smartcutapp.data.remote.dto.UploadResponseDto
+import com.example.smartcutapp.domain.model.Ingredient
 import com.example.smartcutapp.domain.model.Recipe
+import com.example.smartcutapp.domain.model.RecipeDraft
 import com.example.smartcutapp.domain.repository.RecipeRepository
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 
 class RecipeRepositoryImpl(private val token: String) : RecipeRepository {
 
+    /** С сервера; если сервер недоступен — из локального кэша (если он есть). */
     override suspend fun getRecipes(): List<Recipe> {
-        val response = ApiClient.client.get("${ApiClient.BASE_URL}/recipes") {
-            header(HttpHeaders.Authorization, "Bearer $token")
+        return try {
+            val dtos = ApiClient.client.get("${ApiClient.BASE_URL}/recipes") {
+                header(HttpHeaders.Authorization, "Bearer $token")
+            }.body<List<RecipeResponseDto>>()
+            RecipeCache.save(dtos)
+            RecipeCache.servedFromCache = false
+            dtos.map { it.toRecipe() }
+        } catch (e: Exception) {
+            val cached = RecipeCache.load()
+            if (cached.isEmpty()) throw e
+            RecipeCache.servedFromCache = true
+            cached.map { it.toRecipe() }
         }
-        return response.body<List<RecipeResponseDto>>().map { it.toRecipe() }
     }
 
     override suspend fun getRecipeById(id: Int): Recipe? {
-        val response = ApiClient.client.get("${ApiClient.BASE_URL}/recipes/$id") {
-            header(HttpHeaders.Authorization, "Bearer $token")
+        return try {
+            ApiClient.client.get("${ApiClient.BASE_URL}/recipes/$id") {
+                header(HttpHeaders.Authorization, "Bearer $token")
+            }.body<RecipeResponseDto>().toRecipe()
+        } catch (e: Exception) {
+            RecipeCache.load().firstOrNull { it.id == id }?.toRecipe() ?: throw e
         }
-        return response.body<RecipeResponseDto>().toRecipe()
     }
 
     override suspend fun createRecipe(
@@ -34,17 +50,29 @@ class RecipeRepositoryImpl(private val token: String) : RecipeRepository {
         cookingTime: String?,
         imageUrl: String?,
         ingredients: List<Triple<String, String?, Boolean>>
-    ): Recipe {
-        val body = RecipeRequestDto(
+    ): Recipe = saveRecipe(
+        id = null,
+        draft = RecipeDraft(
             name = name,
-            cookingTime = cookingTime,
+            cookingTime = cookingTime.orEmpty(),
             imageUrl = imageUrl,
-            ingredients = ingredients.map { (n, a, c) -> IngredientRequestDto(n, a, c) }
+            ingredients = ingredients.mapIndexed { i, (n, a, c) ->
+                Ingredient(id = i, name = n, amount = a.orEmpty(), cuttable = c)
+            }
         )
-        val response = ApiClient.client.post("${ApiClient.BASE_URL}/recipes") {
+    )
+
+    /** Создаёт рецепт (id == null) или правит существующий (PUT). */
+    suspend fun saveRecipe(id: Int?, draft: RecipeDraft): Recipe {
+        val url = if (id == null) "${ApiClient.BASE_URL}/recipes" else "${ApiClient.BASE_URL}/recipes/$id"
+        val response = ApiClient.client.request(url) {
+            method = if (id == null) HttpMethod.Post else HttpMethod.Put
             header(HttpHeaders.Authorization, "Bearer $token")
             contentType(ContentType.Application.Json)
-            setBody(body)
+            setBody(draft.toRequest())
+        }
+        if (!response.status.isSuccess()) {
+            error("Сервер отклонил рецепт (${response.status.value}): ${response.bodyAsText()}")
         }
         return response.body<RecipeResponseDto>().toRecipe()
     }

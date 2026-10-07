@@ -64,39 +64,15 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun shows_ai_section() {
-        setScreen()
-        composeTestRule.onNodeWithText("AI ПОМОЩНИК").assertIsDisplayed()
-    }
-
-    @Test
-    fun shows_mistral_api_key_label() {
-        setScreen()
-        composeTestRule.onNodeWithText("Mistral API ключ").assertIsDisplayed()
-    }
-
-    @Test
-    fun shows_ollama_url_label() {
-        setScreen()
-        composeTestRule.onNodeWithText("Ollama — адрес сервера").assertIsDisplayed()
-    }
-
-    @Test
-    fun shows_ollama_model_label() {
-        setScreen()
-        composeTestRule.onNodeWithText("Ollama — модель").assertIsDisplayed()
-    }
-
-    @Test
     fun shows_mqtt_section() {
         setScreen()
-        composeTestRule.onNodeWithText("ESP32 / MQTT").assertIsDisplayed()
+        composeTestRule.onNodeWithText("УСТРОЙСТВО").assertIsDisplayed()
     }
 
     @Test
-    fun shows_camera_section() {
+    fun shows_appearance_section() {
         setScreen()
-        composeTestRule.onNodeWithText("ESP32 КАМЕРА").assertIsDisplayed()
+        composeTestRule.onNodeWithText("ВНЕШНИЙ ВИД").assertIsDisplayed()
     }
 
     @Test

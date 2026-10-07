@@ -3,6 +3,7 @@ package com.example.smartcutapp.presentation.screens.product_scan
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -18,32 +19,41 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.smartcutapp.app.ui.theme.SmartCutColors
+import com.example.smartcutapp.presentation.components.NutritionRow
+import com.example.smartcutapp.presentation.components.SectionCard
+import com.example.smartcutapp.presentation.components.rememberPhotoPicker
 import kotlinx.coroutines.delay
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductScanScreen(navController: NavController) {
     val darkTheme = isSystemInDarkTheme()
     val viewModel: ProductScanViewModel = viewModel()
 
     val capturedImage by viewModel.capturedImage.collectAsState()
-    val isCapturing by viewModel.isCapturing.collectAsState()
     val isAnalyzing by viewModel.isAnalyzing.collectAsState()
-    val rawCaption by viewModel.rawCaption.collectAsState()
+    val nameRu by viewModel.nameRu.collectAsState()
     val detectedPreset by viewModel.detectedPreset.collectAsState()
-    val thickness by viewModel.thickness.collectAsState()
-    val cubeSize by viewModel.cubeSize.collectAsState()
     val speed by viewModel.speed.collectAsState()
+    val nutrition by viewModel.nutrition.collectAsState()
+    val nutritionLoading by viewModel.nutritionLoading.collectAsState()
+    val nutritionError by viewModel.nutritionError.collectAsState()
+    val grams by viewModel.grams.collectAsState()
     val error by viewModel.error.collectAsState()
     val sendResult by viewModel.sendResult.collectAsState()
     val isSending by viewModel.isSending.collectAsState()
     val isConnected by viewModel.isConnected.collectAsState()
-    val isBusy = isCapturing || isAnalyzing
+    val isBusy = isAnalyzing
+    val context = LocalContext.current
+    val photoPicker = rememberPhotoPicker { uri -> viewModel.analyze(context, uri) }
 
     LaunchedEffect(sendResult) {
         if (sendResult != null) {
@@ -142,8 +152,7 @@ fun ProductScanScreen(navController: NavController) {
                             ) {
                                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                                 Text(
-                                    text = if (isCapturing) "Делаем снимок с ESP32-CAM..."
-                                    else "Ollama анализирует продукт...",
+                                    text = "Распознаю продукт...",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = SmartCutColors.TextSecondary,
                                     textAlign = TextAlign.Center
@@ -160,7 +169,7 @@ fun ProductScanScreen(navController: NavController) {
                                     style = MaterialTheme.typography.displayMedium
                                 )
                                 Text(
-                                    text = "Поднесите продукт к ESP32-CAM\nи нажмите «Сканировать»",
+                                    text = "Сфотографируйте продукт\nили выберите фото из галереи",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = SmartCutColors.TextSecondary,
                                     textAlign = TextAlign.Center
@@ -170,9 +179,9 @@ fun ProductScanScreen(navController: NavController) {
                     }
                 }
 
-                // Scan button
+                // Photo buttons
                 Button(
-                    onClick = { viewModel.scan() },
+                    onClick = { photoPicker.camera() },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     enabled = !isBusy,
@@ -182,16 +191,20 @@ fun ProductScanScreen(navController: NavController) {
                     )
                 ) {
                     Text(
-                        text = when {
-                            isCapturing -> "Снимаем..."
-                            isAnalyzing -> "AI анализирует..."
-                            else -> "Сканировать"
-                        },
+                        text = if (isAnalyzing) "AI анализирует..." else "Сфотографировать",
                         style = MaterialTheme.typography.titleMedium,
                         color = if (!isBusy) MaterialTheme.colorScheme.onPrimary
                         else SmartCutColors.TextSecondary,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
+                }
+                OutlinedButton(
+                    onClick = { photoPicker.gallery() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isBusy
+                ) {
+                    Text("Выбрать из галереи", modifier = Modifier.padding(vertical = 4.dp))
                 }
 
                 // Error
@@ -239,19 +252,69 @@ fun ProductScanScreen(navController: NavController) {
                                 )
                                 Column {
                                     Text(
-                                        text = detectedPreset!!.productNameRu,
+                                        text = nameRu ?: detectedPreset!!.productNameRu,
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
-                                    if (!rawCaption.isNullOrBlank()) {
-                                        Text(
-                                            text = rawCaption ?: "",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = SmartCutColors.TextSecondary
-                                        )
-                                    }
                                 }
+                            }
+                        }
+                    }
+
+                    // КБЖУ распознанного продукта
+                    SectionCard {
+                        Text(
+                            text = "КБЖУ ПРОДУКТА",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SmartCutColors.TextSecondary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        when {
+                            nutritionLoading -> Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                Text("Считаю КБЖУ…", style = MaterialTheme.typography.bodyMedium)
+                            }
+                            nutrition != null -> {
+                                NutritionRow("На 100 г", nutrition!!.per100g, highlight = true)
+                                Spacer(Modifier.height(12.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text("Масса", style = MaterialTheme.typography.bodyMedium, color = SmartCutColors.TextSecondary)
+                                    OutlinedButton(onClick = { viewModel.setGrams(grams - 10) }) { Text("−") }
+                                    Text(
+                                        text = "$grams г",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.width(64.dp),
+                                        textAlign = TextAlign.Center
+                                    )
+                                    OutlinedButton(onClick = { viewModel.setGrams(grams + 10) }) { Text("+") }
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                NutritionRow("На $grams г", nutrition!!.forGrams(grams.toDouble()))
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = "Оценка нейросети по сырому продукту, приблизительно",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = SmartCutColors.TextSecondary
+                                )
+                            }
+                            else -> {
+                                Text(
+                                    text = nutritionError ?: "КБЖУ не рассчитано",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                OutlinedButton(onClick = { viewModel.retryNutrition() }) { Text("Повторить расчёт") }
                             }
                         }
                     }
@@ -278,7 +341,7 @@ fun ProductScanScreen(navController: NavController) {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = detectedPreset!!.modeLabel,
+                                    text = detectedPreset!!.cut.label,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
@@ -287,74 +350,11 @@ fun ProductScanScreen(navController: NavController) {
 
                             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
-                            // Thickness or cube size
-                            if (detectedPreset!!.mode == "slice") {
-                                Text(
-                                    text = "Толщина слайса",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = SmartCutColors.TextSecondary
-                                )
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    FilledIconToggleButton(
-                                        checked = false,
-                                        onCheckedChange = { viewModel.setThickness(thickness - 1) },
-                                        modifier = Modifier.size(40.dp)
-                                    ) {
-                                        Text("−", style = MaterialTheme.typography.titleMedium)
-                                    }
-                                    Text(
-                                        text = "$thickness мм",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.width(64.dp),
-                                        textAlign = TextAlign.Center
-                                    )
-                                    FilledIconToggleButton(
-                                        checked = false,
-                                        onCheckedChange = { viewModel.setThickness(thickness + 1) },
-                                        modifier = Modifier.size(40.dp)
-                                    ) {
-                                        Text("+", style = MaterialTheme.typography.titleMedium)
-                                    }
-                                }
-                            } else {
-                                Text(
-                                    text = "Размер кубика",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = SmartCutColors.TextSecondary
-                                )
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    FilledIconToggleButton(
-                                        checked = false,
-                                        onCheckedChange = { viewModel.setCubeSize(cubeSize - 1) },
-                                        modifier = Modifier.size(40.dp)
-                                    ) {
-                                        Text("−", style = MaterialTheme.typography.titleMedium)
-                                    }
-                                    Text(
-                                        text = "$cubeSize мм",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.width(64.dp),
-                                        textAlign = TextAlign.Center
-                                    )
-                                    FilledIconToggleButton(
-                                        checked = false,
-                                        onCheckedChange = { viewModel.setCubeSize(cubeSize + 1) },
-                                        modifier = Modifier.size(40.dp)
-                                    ) {
-                                        Text("+", style = MaterialTheme.typography.titleMedium)
-                                    }
-                                }
-                            }
+                            Text(
+                                text = detectedPreset!!.cut.attachment,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = SmartCutColors.TextSecondary
+                            )
 
                             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
@@ -383,10 +383,18 @@ fun ProductScanScreen(navController: NavController) {
                                 Text("Медленно", style = MaterialTheme.typography.bodySmall, color = SmartCutColors.TextSecondary)
                                 Text("Быстро", style = MaterialTheme.typography.bodySmall, color = SmartCutColors.TextSecondary)
                             }
+                            val sliderInteraction = remember { MutableInteractionSource() }
                             Slider(
                                 value = speed,
                                 onValueChange = { viewModel.setSpeed(it) },
                                 modifier = Modifier.fillMaxWidth(),
+                                interactionSource = sliderInteraction,
+                                thumb = {
+                                    SliderDefaults.Thumb(
+                                        interactionSource = sliderInteraction,
+                                        thumbSize = DpSize(24.dp, 24.dp)
+                                    )
+                                },
                                 colors = SliderDefaults.colors(
                                     thumbColor = MaterialTheme.colorScheme.primary,
                                     activeTrackColor = MaterialTheme.colorScheme.primary,
@@ -412,7 +420,7 @@ fun ProductScanScreen(navController: NavController) {
 
                     if (!isConnected) {
                         Text(
-                            text = "ESP32 не подключён — настройте MQTT в разделе Настройки",
+                            text = "Устройство не подключено — подключитесь в разделе Настройки",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error
                         )
@@ -448,7 +456,7 @@ fun ProductScanScreen(navController: NavController) {
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "Сканировать другой продукт",
+                            text = "Распознать другой продукт",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary
                         )

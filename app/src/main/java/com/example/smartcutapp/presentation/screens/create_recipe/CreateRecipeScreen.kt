@@ -4,6 +4,11 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import com.example.smartcutapp.domain.model.CutType
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,13 +32,16 @@ import coil3.compose.AsyncImage
 import com.example.smartcutapp.app.ui.theme.SmartCutColors
 
 @Composable
-fun CreateRecipeScreen(navController: NavController) {
+fun CreateRecipeScreen(navController: NavController, editRecipeId: Int? = null) {
     val darkTheme = isSystemInDarkTheme()
     val viewModel: CreateRecipeViewModel = viewModel()
     val context = LocalContext.current
 
     var name by remember { mutableStateOf("") }
     var cookingTime by remember { mutableStateOf("") }
+    var servings by remember { mutableStateOf("1") }
+    var steps by remember { mutableStateOf("") }
+    var tags by remember { mutableStateOf("") }
     var ingredients by remember { mutableStateOf(listOf(IngredientDraft())) }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     var imageBytes by remember { mutableStateOf<ByteArray?>(null) }
@@ -41,6 +49,24 @@ fun CreateRecipeScreen(navController: NavController) {
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val created by viewModel.created.collectAsState()
+    val editing by viewModel.editing.collectAsState()
+
+    LaunchedEffect(editRecipeId) {
+        if (editRecipeId != null) viewModel.loadForEdit(editRecipeId)
+    }
+    LaunchedEffect(editing) {
+        editing?.let { r ->
+            name = r.name
+            cookingTime = r.cookingTime
+            servings = r.servings.toString()
+            steps = r.steps.joinToString("\n")
+            tags = r.tags.joinToString(", ")
+            imageUri = r.imageUrl?.let { Uri.parse(it) }
+            ingredients = r.ingredients.map {
+                IngredientDraft(it.name, it.amount, it.cuttable, it.grams?.toString().orEmpty(), it.cutType)
+            }.ifEmpty { listOf(IngredientDraft()) }
+        }
+    }
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -84,7 +110,7 @@ fun CreateRecipeScreen(navController: NavController) {
                     )
                 }
                 Text(
-                    text = "Новый рецепт",
+                    text = if (editRecipeId != null) "Правка рецепта" else "Новый рецепт",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = if (darkTheme) MaterialTheme.colorScheme.onSurface
@@ -151,6 +177,37 @@ fun CreateRecipeScreen(navController: NavController) {
                         value = cookingTime,
                         onValueChange = { cookingTime = it },
                         label = { Text("Время приготовления (напр. 15 мин)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        )
+                    )
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = servings,
+                        onValueChange = { servings = it.filter(Char::isDigit).take(2) },
+                        label = { Text("Базовое число порций") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        )
+                    )
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = tags,
+                        onValueChange = { tags = it },
+                        label = { Text("Теги через запятую (салат, быстро)") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true,
@@ -236,26 +293,52 @@ fun CreateRecipeScreen(navController: NavController) {
                                     }
                                 }
                             }
+                            OutlinedTextField(
+                                value = ingredient.grams,
+                                onValueChange = { v ->
+                                    ingredients = ingredients.toMutableList().also {
+                                        it[index] = it[index].copy(grams = v.filter(Char::isDigit).take(5))
+                                    }
+                                },
+                                label = { Text("Масса на базовые порции, г") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                                )
+                            )
+                            Text(
+                                text = "Нарезка слайсером",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = SmartCutColors.TextSecondary
+                            )
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.horizontalScroll(rememberScrollState()),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Checkbox(
-                                    checked = ingredient.cuttable,
-                                    onCheckedChange = { v ->
+                                FilterChip(
+                                    selected = ingredient.cutType == null,
+                                    onClick = {
                                         ingredients = ingredients.toMutableList().also {
-                                            it[index] = it[index].copy(cuttable = v)
+                                            it[index] = it[index].copy(cutType = null, cuttable = false)
                                         }
                                     },
-                                    colors = CheckboxDefaults.colors(
-                                        checkedColor = MaterialTheme.colorScheme.primary
+                                    label = { Text("Без нарезки") }
+                                )
+                                CutType.entries.forEach { type ->
+                                    FilterChip(
+                                        selected = ingredient.cutType == type,
+                                        onClick = {
+                                            ingredients = ingredients.toMutableList().also {
+                                                it[index] = it[index].copy(cutType = type, cuttable = true)
+                                            }
+                                        },
+                                        label = { Text(type.label) }
                                     )
-                                )
-                                Text(
-                                    text = "Можно нарезать слайсером",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
+                                }
                             }
                         }
                     }
@@ -271,6 +354,20 @@ fun CreateRecipeScreen(navController: NavController) {
                     }
                 }
 
+                item {
+                    OutlinedTextField(
+                        value = steps,
+                        onValueChange = { steps = it },
+                        label = { Text("Шаги приготовления (каждый с новой строки)") },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        )
+                    )
+                }
+
                 if (error != null) {
                     item {
                         Text(
@@ -283,7 +380,18 @@ fun CreateRecipeScreen(navController: NavController) {
 
                 item {
                     Button(
-                        onClick = { viewModel.createRecipe(name, cookingTime, imageBytes, ingredients) },
+                        onClick = {
+                            viewModel.createRecipe(
+                                name = name,
+                                cookingTime = cookingTime,
+                                imageBytes = imageBytes,
+                                ingredients = ingredients,
+                                servings = servings.toIntOrNull() ?: 1,
+                                steps = steps,
+                                tags = tags,
+                                editId = editRecipeId
+                            )
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         enabled = !isLoading,

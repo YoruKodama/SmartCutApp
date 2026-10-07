@@ -4,5 +4,8 @@ data class Ingredient(
     val id: Int,
     val name: String,
     val amount: String,
-    val cuttable: Boolean = false
+    val cuttable: Boolean = false,
+    /** Целевая масса на базовое число порций, г. Null — масса не задана. */
+    val grams: Int? = null,
+    val cutType: CutType? = null
 )

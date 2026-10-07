@@ -1,18 +1,20 @@
 package com.example.smartcutapp.data.local
 
 import android.content.Context
+import com.example.smartcutapp.domain.model.CutType
 
 object PreferencesManager {
 
     private const val PREFS_NAME = "smartcut_prefs"
     private const val KEY_TOKEN = "token"
-    private const val KEY_MQTT_BROKER = "mqtt_broker"
     private const val KEY_THEME_MODE = "theme_mode"
-    private const val KEY_CLAUDE_API_KEY = "claude_api_key"
-    private const val KEY_MISTRAL_API_KEY = "mistral_api_key"
-    private const val KEY_ESP32_CAM_URL = "esp32_cam_url"
-    private const val KEY_OLLAMA_URL = "ollama_url"
-    private const val KEY_OLLAMA_MODEL = "ollama_model"
+    private const val KEY_ATTACHMENTS = "attachments"
+    private const val KEY_DEVICE_ID = "device_id"
+    private const val KEY_AUTO_CONFIRM = "auto_confirm"
+    private const val KEY_DAILY_KCAL_GOAL = "daily_kcal_goal"
+    private const val KEY_RECIPES_CACHE = "recipes_cache"
+    private const val KEY_JOURNAL = "journal"
+    private const val KEY_NUTRITION_CACHE = "nutrition_cache"
 
     private lateinit var ctx: Context
 
@@ -26,31 +28,42 @@ object PreferencesManager {
         get() = prefs.getString(KEY_TOKEN, "") ?: ""
         set(value) = prefs.edit().putString(KEY_TOKEN, value).apply()
 
-    var mqttBrokerUrl: String
-        get() = prefs.getString(KEY_MQTT_BROKER, "tcp://broker.hivemq.com:1883") ?: "tcp://broker.hivemq.com:1883"
-        set(value) = prefs.edit().putString(KEY_MQTT_BROKER, value).apply()
-
     var themeMode: Int
         get() = prefs.getInt(KEY_THEME_MODE, 0)
         set(value) = prefs.edit().putInt(KEY_THEME_MODE, value).apply()
 
-    var claudeApiKey: String
-        get() = prefs.getString(KEY_CLAUDE_API_KEY, "") ?: ""
-        set(value) = prefs.edit().putString(KEY_CLAUDE_API_KEY, value).apply()
 
-    var mistralApiKey: String
-        get() = prefs.getString(KEY_MISTRAL_API_KEY, "") ?: ""
-        set(value) = prefs.edit().putString(KEY_MISTRAL_API_KEY, value).apply()
+    /** Насадки, которые есть у пользователя (по умолчанию — все). */
+    var availableAttachments: Set<CutType>
+        get() {
+            val raw = prefs.getString(KEY_ATTACHMENTS, null) ?: return CutType.entries.toSet()
+            return raw.split(",").mapNotNull { CutType.fromApi(it) }.toSet()
+        }
+        set(value) = prefs.edit().putString(KEY_ATTACHMENTS, value.joinToString(",") { it.apiName }).apply()
 
-    var esp32CamUrl: String
-        get() = prefs.getString(KEY_ESP32_CAM_URL, "http://192.168.4.1") ?: "http://192.168.4.1"
-        set(value) = prefs.edit().putString(KEY_ESP32_CAM_URL, value).apply()
+    /** Код привязанного устройства (из QR или введённый вручную). Пусто — общие топики по умолчанию. */
+    var deviceId: String
+        get() = prefs.getString(KEY_DEVICE_ID, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_DEVICE_ID, value).apply()
 
-    var ollamaUrl: String
-        get() = prefs.getString(KEY_OLLAMA_URL, "http://192.168.1.100:11434") ?: "http://192.168.1.100:11434"
-        set(value) = prefs.edit().putString(KEY_OLLAMA_URL, value).apply()
+    /** Режим «байпасс»: в команде нарезки просим устройство подтверждать старт автоматически. */
+    var autoConfirm: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_CONFIRM, false)
+        set(value) = prefs.edit().putBoolean(KEY_AUTO_CONFIRM, value).apply()
 
-    var ollamaModel: String
-        get() = prefs.getString(KEY_OLLAMA_MODEL, "llava") ?: "llava"
-        set(value) = prefs.edit().putString(KEY_OLLAMA_MODEL, value).apply()
+    var dailyKcalGoal: Int
+        get() = prefs.getInt(KEY_DAILY_KCAL_GOAL, 2000)
+        set(value) = prefs.edit().putInt(KEY_DAILY_KCAL_GOAL, value).apply()
+
+    var recipesCache: String
+        get() = prefs.getString(KEY_RECIPES_CACHE, "[]") ?: "[]"
+        set(value) = prefs.edit().putString(KEY_RECIPES_CACHE, value).apply()
+
+    var journalJson: String
+        get() = prefs.getString(KEY_JOURNAL, "[]") ?: "[]"
+        set(value) = prefs.edit().putString(KEY_JOURNAL, value).apply()
+
+    var nutritionCacheJson: String
+        get() = prefs.getString(KEY_NUTRITION_CACHE, "{}") ?: "{}"
+        set(value) = prefs.edit().putString(KEY_NUTRITION_CACHE, value).apply()
 }

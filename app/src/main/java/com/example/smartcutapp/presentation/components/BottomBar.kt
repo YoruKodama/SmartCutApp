@@ -1,8 +1,11 @@
 package com.example.smartcutapp.presentation.components
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -12,8 +15,9 @@ import com.example.smartcutapp.presentation.navigation.Screen
 
 data class BottomNavItem(
     val route: String,
-    val iconRes: Int,
-    val label: String
+    val iconRes: Int?,
+    val label: String,
+    val vector: ImageVector? = null
 )
 
 @Composable
@@ -21,7 +25,7 @@ fun BottomBar(navController: NavController) {
     val items = listOf(
         BottomNavItem(Screen.Main.route, R.drawable.home_svgrepo_com_1, "Главная"),
         BottomNavItem(Screen.Recipes.route, R.drawable.notepad_svgrepo_com_1, "Рецепты"),
-        BottomNavItem(Screen.Weighing.route, R.drawable.scales, "Весы"),
+        BottomNavItem(Screen.Journal.route, null, "Питание", Icons.Filled.Restaurant),
         BottomNavItem(Screen.Settings.route, R.drawable.settings_svgrepo_com_1, "Настройки"),
     )
     val navBackStack by navController.currentBackStackEntryAsState()
@@ -39,10 +43,11 @@ fun BottomBar(navController: NavController) {
                     }
                 },
                 icon = {
-                    Icon(
-                        painter = painterResource(id = item.iconRes),
-                        contentDescription = item.label
-                    )
+                    if (item.vector != null) {
+                        Icon(imageVector = item.vector, contentDescription = item.label)
+                    } else {
+                        Icon(painter = painterResource(id = item.iconRes!!), contentDescription = item.label)
+                    }
                 },
                 label = { Text(item.label) },
                 colors = NavigationBarItemDefaults.colors(

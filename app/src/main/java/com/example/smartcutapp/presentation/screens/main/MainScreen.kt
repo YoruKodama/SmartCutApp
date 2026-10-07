@@ -20,19 +20,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.example.smartcutapp.R
+import com.example.smartcutapp.data.remote.api.ApiClient
 import com.example.smartcutapp.app.ui.theme.SmartCutColors
+import com.example.smartcutapp.domain.model.CutType
 import com.example.smartcutapp.domain.model.Recipe
 import com.example.smartcutapp.presentation.navigation.Screen
 
-data class CutModeUi(
-    val label: String,
-    val description: String
-)
-
-private val tempCutModes = listOf(
-    CutModeUi("Кубиками", "Размер кубика"),
-    CutModeUi("Слайсами", "Толщина слайса"),
-)
 
 @Composable
 fun MainScreen(navController: NavController) {
@@ -94,29 +87,27 @@ fun MainScreen(navController: NavController) {
                         .padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    tempCutModes.forEachIndexed { index, mode ->
+                    CutType.entries.forEachIndexed { index, type ->
                         CutModeCard(
-                            mode = mode,
+                            type = type,
                             index = index + 1,
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                if (index == 0) navController.navigate(Screen.BladeSettings.createRoute())
-                                else navController.navigate(Screen.Slices.createRoute())
-                            }
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }
             }
 
             item {
-                SectionTitle(
-                    title = "AI нарезка",
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                )
-                AiScanCard(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    onClick = { navController.navigate(Screen.ProductScan.route) }
-                )
+                Button(
+                    onClick = { navController.navigate(Screen.ProductScan.route) },
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp, vertical = 16.dp)
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text("Распознать продукт", style = MaterialTheme.typography.titleMedium)
+                }
             }
 
             if (recentRecipes.isNotEmpty()) {
@@ -229,7 +220,7 @@ private fun RecipeOfDayCard(recipe: Recipe, modifier: Modifier = Modifier, onCli
             ) {
                 if (!recipe.imageUrl.isNullOrEmpty()) {
                     AsyncImage(
-                        model = recipe.imageUrl,
+                        model = ApiClient.resolveImageUrl(recipe.imageUrl),
                         contentDescription = recipe.name,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
@@ -249,13 +240,12 @@ private fun RecipeOfDayCard(recipe: Recipe, modifier: Modifier = Modifier, onCli
 
 @Composable
 private fun CutModeCard(
-    mode: CutModeUi,
+    type: CutType,
     index: Int,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.clickable { onClick() },
+        modifier = modifier,
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(2.dp)
@@ -280,63 +270,15 @@ private fun CutModeCard(
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                text = mode.label,
+                text = type.label,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = mode.description,
-                style = MaterialTheme.typography.bodyMedium,
+                text = type.attachment,
+                style = MaterialTheme.typography.bodySmall,
                 color = SmartCutColors.TextSecondary
-            )
-        }
-    }
-}
-
-@Composable
-private fun AiScanCard(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val darkTheme = isSystemInDarkTheme()
-    Card(
-        modifier = modifier.fillMaxWidth().clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (darkTheme) MaterialTheme.colorScheme.surface
-            else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-        ),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "🔍", style = MaterialTheme.typography.titleLarge)
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Распознать продукт",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Ollama + ESP32-CAM подберёт режим нарезки автоматически",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = SmartCutColors.TextSecondary
-                )
-            }
-            Text(
-                text = "→",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
             )
         }
     }
@@ -372,7 +314,7 @@ private fun RecentRecipeCard(
             ) {
                 if (!recipe.imageUrl.isNullOrEmpty()) {
                     AsyncImage(
-                        model = recipe.imageUrl,
+                        model = ApiClient.resolveImageUrl(recipe.imageUrl),
                         contentDescription = recipe.name,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()

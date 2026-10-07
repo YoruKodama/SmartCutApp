@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -12,9 +11,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -30,18 +26,11 @@ fun SettingsScreen(navController: NavController) {
 
     val isConnected by viewModel.isConnected.collectAsState()
     val isConnecting by viewModel.isConnecting.collectAsState()
-    val brokerUrl by viewModel.brokerUrl.collectAsState()
-    val deviceStatus by viewModel.deviceStatus.collectAsState()
     val esp32Online by viewModel.esp32Online.collectAsState()
     val error by viewModel.error.collectAsState()
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
-    val mistralApiKey by viewModel.mistralApiKey.collectAsState()
-    val esp32CamUrl by viewModel.esp32CamUrl.collectAsState()
-    val ollamaUrl by viewModel.ollamaUrl.collectAsState()
-    val ollamaModel by viewModel.ollamaModel.collectAsState()
 
-    var showMistralKey by remember { mutableStateOf(false) }
 
     LaunchedEffect(isLoggedIn) {
         if (!isLoggedIn) {
@@ -88,6 +77,13 @@ fun SettingsScreen(navController: NavController) {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // --- УСТРОЙСТВО И НАСАДКИ ---
+                Button(
+                    onClick = { navController.navigate(Screen.DeviceSetup.route) },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) { Text("Устройство и насадки") }
+
                 // --- ТЕМА ---
                 Text(
                     text = "ВНЕШНИЙ ВИД",
@@ -132,148 +128,9 @@ fun SettingsScreen(navController: NavController) {
                     }
                 }
 
-                // --- AI КЛЮЧ ---
+                // --- УСТРОЙСТВО ---
                 Text(
-                    text = "AI ПОМОЩНИК",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = SmartCutColors.TextSecondary,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = "Mistral API ключ",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "platform.mistral.ai → API keys — для чата с рецептами",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = SmartCutColors.TextSecondary
-                        )
-                        OutlinedTextField(
-                            value = mistralApiKey,
-                            onValueChange = { viewModel.setMistralApiKey(it) },
-                            label = { Text("...") },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true,
-                            visualTransformation = if (showMistralKey) VisualTransformation.None
-                            else PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            trailingIcon = {
-                                TextButton(onClick = { showMistralKey = !showMistralKey }) {
-                                    Text(
-                                        text = if (showMistralKey) "Скрыть" else "Показать",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            },
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                            )
-                        )
-
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 4.dp),
-                            color = MaterialTheme.colorScheme.outline
-                        )
-
-                        Text(
-                            text = "Ollama — адрес сервера",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "IP ПК в локальной сети с запущенным Ollama — для распознавания продуктов",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = SmartCutColors.TextSecondary
-                        )
-                        OutlinedTextField(
-                            value = ollamaUrl,
-                            onValueChange = { viewModel.setOllamaUrl(it) },
-                            label = { Text("http://192.168.1.100:11434") },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                            )
-                        )
-
-                        Text(
-                            text = "Ollama — модель",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "llava (рекомендуется) или moondream для слабых ПК",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = SmartCutColors.TextSecondary
-                        )
-                        OutlinedTextField(
-                            value = ollamaModel,
-                            onValueChange = { viewModel.setOllamaModel(it) },
-                            label = { Text("llava") },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                            )
-                        )
-                    }
-                }
-
-                // --- ESP32 КАМЕРА ---
-                Text(
-                    text = "ESP32 КАМЕРА",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = SmartCutColors.TextSecondary,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = "Адрес ESP32-CAM",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "IP-адрес модуля в локальной сети (без /capture)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = SmartCutColors.TextSecondary
-                        )
-                        OutlinedTextField(
-                            value = esp32CamUrl,
-                            onValueChange = { viewModel.setEsp32CamUrl(it) },
-                            label = { Text("http://192.168.4.1") },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                            )
-                        )
-                    }
-                }
-
-                // --- MQTT ---
-                Text(
-                    text = "ESP32 / MQTT",
+                    text = "УСТРОЙСТВО",
                     style = MaterialTheme.typography.labelSmall,
                     color = SmartCutColors.TextSecondary,
                     fontWeight = FontWeight.SemiBold
@@ -285,7 +142,7 @@ fun SettingsScreen(navController: NavController) {
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         StatusRow(
-                            label = "Брокер MQTT",
+                            label = "Связь",
                             connected = isConnected,
                             onText = "Подключено",
                             offText = "Отключено"
@@ -293,31 +150,10 @@ fun SettingsScreen(navController: NavController) {
 
                         if (isConnected) {
                             StatusRow(
-                                label = "ESP32",
+                                label = "SlicerBot",
                                 connected = esp32Online,
                                 onText = "Онлайн",
                                 offText = "Не найден"
-                            )
-                        }
-
-                        OutlinedTextField(
-                            value = brokerUrl,
-                            onValueChange = { viewModel.setBrokerUrl(it) },
-                            label = { Text("Адрес брокера MQTT") },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                            )
-                        )
-
-                        if (deviceStatus.isNotEmpty()) {
-                            Text(
-                                text = "Последнее сообщение: $deviceStatus",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = SmartCutColors.TextSecondary
                             )
                         }
 
@@ -448,6 +284,7 @@ fun SettingsScreen(navController: NavController) {
         }
     }
 }
+
 
 @Composable
 private fun ThemeModeButton(

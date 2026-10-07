@@ -1,7 +1,16 @@
 package com.example.smartcutapp.presentation.screens.recipes
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.ui.platform.LocalContext
+import com.example.smartcutapp.data.local.PreferencesManager
+import com.example.smartcutapp.domain.usecase.RecipePlanner
+import com.example.smartcutapp.presentation.components.AppHeader
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.smartcutapp.R
+import com.example.smartcutapp.data.remote.api.ApiClient
 import com.example.smartcutapp.app.ui.theme.SmartCutColors
 import com.example.smartcutapp.domain.model.Recipe
 import com.example.smartcutapp.presentation.navigation.Screen
@@ -38,13 +48,51 @@ fun RecipesScreen(navController: NavController) {
     val recipes by viewModel.recipes.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val offline by viewModel.offline.collectAsState()
+    val message by viewModel.message.collectAsState()
+
+    var onlyMyAttachments by remember { mutableStateOf(false) }
+    val myAttachments = remember { PreferencesManager.availableAttachments }
+    val context = LocalContext.current
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            val text = viewModel.exportJson()
+            val written = runCatching {
+                context.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) } != null
+            }.getOrDefault(false)
+            viewModel.showMessage(
+                if (written) "Экспортировано рецептов: ${viewModel.exportedCount()}" else "Не удалось сохранить файл"
+            )
+        }
+    }
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            val text = runCatching {
+                context.contentResolver.openInputStream(uri)?.use { it.readBytes().decodeToString() }
+            }.getOrNull()
+            if (text == null) viewModel.showMessage("Не удалось прочитать файл") else viewModel.importJson(text)
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.loadRecipes()
     }
 
+    LaunchedEffect(message) {
+        message?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            viewModel.clearMessage()
+        }
+    }
+
     val filtered = recipes.filter {
-        it.name.contains(searchQuery, ignoreCase = true)
+        it.name.contains(searchQuery, ignoreCase = true) &&
+            (!onlyMyAttachments || RecipePlanner.matchesAttachments(it, myAttachments))
     }
 
     Scaffold(
@@ -66,7 +114,7 @@ fun RecipesScreen(navController: NavController) {
                     )
                 }
                 FloatingActionButton(
-                    onClick = { navController.navigate(Screen.CreateRecipe.route) },
+                    onClick = { navController.navigate(Screen.CreateRecipe.createRoute()) },
                     containerColor = MaterialTheme.colorScheme.primary
                 ) {
                     Icon(
@@ -83,7 +131,22 @@ fun RecipesScreen(navController: NavController) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            RecipesHeader()
+            RecipesHeader(
+                onExport = { exportLauncher.launch("smartcut-recipes.json") },
+                onImport = { importLauncher.launch(arrayOf("application/json", "text/*", "application/octet-stream")) }
+            )
+
+            if (offline) {
+                Text(
+                    text = "Нет связи с сервером — показаны сохранённые на телефоне рецепты",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                )
+            }
 
             OutlinedTextField(
                 value = searchQuery,
@@ -105,6 +168,13 @@ fun RecipesScreen(navController: NavController) {
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 )
+            )
+
+            FilterChip(
+                selected = onlyMyAttachments,
+                onClick = { onlyMyAttachments = !onlyMyAttachments },
+                label = { Text("Под мои насадки") },
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
 
             if (isLoading) {
@@ -138,28 +208,14 @@ fun RecipesScreen(navController: NavController) {
 }
 
 @Composable
-private fun RecipesHeader() {
-    val darkTheme = LocalDarkTheme.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                if (darkTheme) MaterialTheme.colorScheme.surface
-                else MaterialTheme.colorScheme.primary
-            )
-            .windowInsetsPadding(WindowInsets.statusBars)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = "Рецепты",
-            style = MaterialTheme.typography.titleLarge,
-            color = if (darkTheme) MaterialTheme.colorScheme.onSurface
-            else MaterialTheme.colorScheme.onPrimary,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(Modifier.width(48.dp))
+private fun RecipesHeader(onExport: () -> Unit, onImport: () -> Unit) {
+    AppHeader(title = "Рецепты") {
+        IconButton(onClick = onImport) {
+            Icon(Icons.Filled.FileDownload, contentDescription = "Импорт рецептов из файла")
+        }
+        IconButton(onClick = onExport) {
+            Icon(Icons.Filled.FileUpload, contentDescription = "Экспорт рецептов в файл")
+        }
     }
 }
 
@@ -189,7 +245,7 @@ private fun RecipeCard(recipe: Recipe, onClick: () -> Unit) {
             ) {
                 if (!recipe.imageUrl.isNullOrEmpty()) {
                     AsyncImage(
-                        model = recipe.imageUrl,
+                        model = ApiClient.resolveImageUrl(recipe.imageUrl),
                         contentDescription = recipe.name,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
